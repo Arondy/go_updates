@@ -1,0 +1,11 @@
+.*/
+!.github/
+gitinit.bat
+*.json
+*.exe
+*.txt
+*.bak
+*.env
+*.dat
+*.db
+test*/

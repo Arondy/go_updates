@@ -1,0 +1,83 @@
+name: Create Release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.25"
+
+      - name: Generate tag
+        id: tag
+        run: |
+          if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+            NEW_TAG=$(git describe --tags --abbrev=0 | awk -F. '{print $1"."$2"."$3+1}')
+          else
+            NEW_TAG="v0.1.0"
+          fi
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Build Linux binary
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o mytool-linux-amd64 -ldflags="-X main.version=${{ steps.tag.outputs.tag }}" .
+
+      - name: Build Windows binary
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o mytool-windows-amd64.exe -ldflags="-X main.version=${{ steps.tag.outputs.tag }}" .
+
+      - name: Generate checksums
+        run: |
+          sha256sum mytool-* > checksums.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            mytool-linux-amd64
+            mytool-windows-amd64.exe
+            checksums.txt
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Push tag
+        run: |
+          git config user.name "Arondy"
+          git config user.email "antongatcenko@gmail.com"
+          git tag -a ${{ needs.build.outputs.tag }} -m "Release ${{ needs.build.outputs.tag }}"
+          git push origin ${{ needs.build.outputs.tag }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: Release ${{ needs.build.outputs.tag }}
+          files: ./artifacts/binaries/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
