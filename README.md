@@ -2,6 +2,10 @@
 
 A simple Go application demonstrating self-updating functionality from GitHub releases.
 
+## Demo
+
+![image-20251109204054537](assets/image-20251109204054537.png)
+
 ## Features
 
 - Automatic updates from GitHub releases
