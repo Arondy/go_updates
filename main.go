@@ -10,6 +10,8 @@ import (
 
 var version = "0.0.1-dev" // Set via -ldflags="-X main.version=..."
 
+// Some changes in main.go for a new release
+
 func main() {
 	args := cli.Parse()
 
